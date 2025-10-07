@@ -441,6 +441,27 @@ window.addEventListener('DOMContentLoaded', async () => {
     filebar.setAttribute('aria-hidden', String(!show));
     document.getElementById('previewWrap').setAttribute('aria-hidden', String(!show));
     installBtn.style.display = modeSelect.value === 'node' ? 'inline-block' : 'none';
+
+    // Show/hide preview controls based on mode
+    const previewControls = document.querySelector('.right-tabs .controls');
+    if (previewControls) {
+      previewControls.style.display = show ? 'flex' : 'none';
+    }
+
+    // Update tab label based on mode
+    const tabLabel = document.querySelector('.right-tabs .tab');
+    if (tabLabel) {
+      tabLabel.textContent = show ? 'Preview + Console' : 'Console';
+    }
+
+    // For JS/Python modes, ensure console is visible and expanded
+    const consoleContainer = document.getElementById('consoleContainer');
+    if (!isProjectMode()) {
+      expandConsole();
+      consoleContainer.style.flex = '1'; // Take full height
+    } else {
+      consoleContainer.style.flex = ''; // Reset to default
+    }
   }
   function refreshFileSelect(){
     const vfs = currentVFS();
@@ -465,15 +486,32 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Mode switching
+  let previousMode = 'javascript';
   modeSelect.addEventListener('change', () => {
     const mode = modeSelect.value;
-    saveCode('javascript', Editor.getValue());
-    saveCode('python', Editor.getValue());
-    if (mode === 'python') Editor.setMode('ace/mode/python');
-    else if (isProjectMode()) { refreshFileSelect(); const vfs = currentVFS(); setActiveFile(vfs.active || (mode==='node'?'public/index.html':'index.html')); }
-    else Editor.setMode('ace/mode/javascript');
-    if (!isProjectMode()) Editor.setValue(initContent(mode));
-    setStatus('idle'); refreshFilebarVisibility(); appendLine(`— Switched to ${mode.toUpperCase()} —`, 'ok');
+
+    // Save code from previous mode
+    if (previousMode === 'javascript' || previousMode === 'python') {
+      saveCode(previousMode, Editor.getValue());
+    }
+
+    // Switch editor mode and content
+    if (mode === 'python') {
+      Editor.setMode('ace/mode/python');
+      Editor.setValue(initContent('python'));
+    } else if (isProjectMode()) {
+      refreshFileSelect();
+      const vfs = currentVFS();
+      setActiveFile(vfs.active || (mode==='node'?'public/index.html':'index.html'));
+    } else { // javascript
+      Editor.setMode('ace/mode/javascript');
+      Editor.setValue(initContent('javascript'));
+    }
+
+    previousMode = mode;
+    setStatus('idle');
+    refreshFilebarVisibility();
+    appendLine(`— Switched to ${mode.toUpperCase()} —`, 'ok');
   });
 
   // Filebar actions
@@ -691,8 +729,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Initial state
+  refreshFilebarVisibility(); // Set correct layout for initial mode
   appendLine('Ready. Modes: JavaScript, Python, WebApp (static), Node (WebContainers). If Ace fails to load, a fallback editor is used.', 'ok');
-  document.getElementById('previewWrap').setAttribute('aria-hidden', 'true');
   setStatus('idle');
 });
 
