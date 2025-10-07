@@ -495,8 +495,26 @@ server.listen(port, ()=> console.log('Server listening on port', port));
         }
       }
 
-      // Autosave edited content (project modes)
-      setInterval(() => { if (isProjectMode()) { const vfs = currentVFS(); if (!vfs.active) return; vfs.files[vfs.active] = Editor.getValue(); saveCurrentVFS(vfs); } }, 1000);
+      // Autosave edited content (project modes) + auto-refresh preview
+      let lastContent = Editor.getValue();
+      setInterval(() => {
+        if (isProjectMode()) {
+          const vfs = currentVFS();
+          if (!vfs.active) return;
+          const currentContent = Editor.getValue();
+          vfs.files[vfs.active] = currentContent;
+          saveCurrentVFS(vfs);
+
+          // Auto-refresh preview if content changed
+          if (currentContent !== lastContent) {
+            lastContent = currentContent;
+            if (modeSelect.value === 'webapp') {
+              runWebApp();
+            }
+            // Note: Node mode requires explicit restart for server changes
+          }
+        }
+      }, 1000);
 
       runBtn.addEventListener('click', window.runCurrent);
       clearBtn.addEventListener('click', clearConsole);
