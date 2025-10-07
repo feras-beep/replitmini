@@ -230,7 +230,7 @@ const server = http.createServer((req,res)=>{
 });
 server.listen(port, ()=> console.log('Server listening on port', port));
 `,
-            'public/index.html': `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Node WebContainer App</title><link rel="stylesheet" href="/style.css"></head><body><main><h1>Node WebContainer App</h1><p id="msg">Hello from Node on <code>WebContainers</code>.</p><button id="ping">Ping</button><pre id="out"></pre><script src="/app.js"></script></main></body></html>`,
+            'public/index.html': `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Node WebContainer App</title><link rel="stylesheet" href="/style.css"><\/head><body><main><h1>Node WebContainer App<\/h1><p id="msg">Hello from Node on <code>WebContainers<\/code>.<\/p><button id="ping">Ping<\/button><pre id="out"><\/pre><script src="/app.js"><\/script><\/main><\/body><\/html>`,
             'public/style.css': `body{font-family:ui-sans-serif,system-ui;margin:0;padding:2rem}main{max-width:680px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;padding:1rem 1.25rem}`,
             'public/app.js': `document.getElementById('ping').addEventListener('click',()=>{ const o=document.getElementById('out'); o.textContent+='\nPONG ' + new Date().toLocaleTimeString(); console.log('PING'); });`
           },
@@ -240,7 +240,7 @@ server.listen(port, ()=> console.log('Server listening on port', port));
       // webapp default
       return {
         files: {
-          'index.html': `<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Mini Web App</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <main>\n    <h1>Mini Web App</h1>\n    <p id=\"msg\">Counter: <span id=\"count\">0</span></p>\n    <button id=\"inc\">Increment</button>\n  </main>\n  <script src=\"script.js\"></script>\n</body>\n</html>`,
+          'index.html': `<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Mini Web App<\/title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n<\/head>\n<body>\n  <main>\n    <h1>Mini Web App<\/h1>\n    <p id=\"msg\">Counter: <span id=\"count\">0<\/span><\/p>\n    <button id=\"inc\">Increment<\/button>\n  <\/main>\n  <script src=\"script.js\"><\/script>\n<\/body>\n<\/html>`,
           'style.css': `:root { --fg:#0f172a; --accent:#2563eb; }\n*{box-sizing:border-box} body{font-family:ui-sans-serif,system-ui; margin:0; padding:2rem; }\nmain{max-width:640px;margin:0 auto; padding:1rem 1.25rem; border:1px solid #e5e7eb; border-radius:12px;}\nh1{color:var(--fg)}\nbutton{padding:.5rem .75rem; border-radius:.5rem; border:1px solid #e5e7eb; background:#111827; color:#e5e7eb}\nbutton:hover{filter:brightness(1.1)}\n`,
           'script.js': `const el = (id)=>document.getElementById(id);\nlet n = 0;\nel('inc').addEventListener('click', ()=>{ n++; el('count').textContent = String(n); console.log('counter', n); });\nconsole.log('app boot');`
         },
