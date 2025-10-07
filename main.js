@@ -1,20 +1,86 @@
 // ------------------ Utilities ------------------
 function qs(sel){ return document.querySelector(sel); }
+
+// Console settings
+const ConsoleSettings = {
+  timestamps: false,
+  clearOnRun: false,
+  maxLines: 500,
+  isExpanded: false
+};
+
+function getTimestamp(){
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+}
+
 function appendLine(text, cls='log'){
   const consoleEl = document.getElementById('console');
   const div = document.createElement('div');
   div.className = `line ${cls}`;
-  div.textContent = text;
+
+  if (ConsoleSettings.timestamps && cls === 'log') {
+    const span = document.createElement('span');
+    span.className = 'timestamp';
+    span.textContent = `[${getTimestamp()}]`;
+    div.appendChild(span);
+    const textNode = document.createTextNode(text);
+    div.appendChild(textNode);
+  } else {
+    div.textContent = text;
+  }
+
   consoleEl.appendChild(div);
+
+  // Limit console lines
+  const lines = consoleEl.querySelectorAll('.line');
+  if (lines.length > ConsoleSettings.maxLines) {
+    lines[0].remove();
+  }
+
   consoleEl.scrollTop = consoleEl.scrollHeight;
+
+  // Auto-expand console when there's new output
+  if (!ConsoleSettings.isExpanded) {
+    expandConsole();
+  }
 }
-function clearConsole(){ document.getElementById('console').innerHTML = ''; }
+
+function clearConsole(){
+  document.getElementById('console').innerHTML = '';
+}
+
 function setStatus(s){
   const statusPill = document.getElementById('statusPill');
   statusPill.textContent = s;
   const map = { idle:'#334155', running:'#3b82f6', error:'#ef4444', done:'#10b981', loading:'#f59e0b' };
   statusPill.style.borderColor = map[s] || '#334155';
   statusPill.style.color = '#e2e8f0';
+}
+
+function toggleConsole(){
+  const container = document.getElementById('consoleContainer');
+  const toggle = document.getElementById('consoleToggle');
+
+  if (container.classList.contains('minimized')) {
+    expandConsole();
+  } else {
+    container.classList.remove('expanded');
+    container.classList.add('minimized');
+    toggle.textContent = '▶';
+    toggle.classList.remove('expanded');
+    ConsoleSettings.isExpanded = false;
+  }
+}
+
+function expandConsole(){
+  const container = document.getElementById('consoleContainer');
+  const toggle = document.getElementById('consoleToggle');
+  container.classList.remove('minimized');
+  container.classList.add('expanded');
+  toggle.textContent = '▼';
+  toggle.classList.add('expanded');
+  ConsoleSettings.isExpanded = true;
 }
 
 // ------------------ Pyodide loader ------------------
@@ -432,7 +498,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Run wiring
   window.runCurrent = async function runCurrent(){
-    const mode = modeSelect.value; clearConsole();
+    const mode = modeSelect.value;
+    if (ConsoleSettings.clearOnRun) clearConsole();
     if (mode === 'python') {
       const code = Editor.getValue(); saveCode('python', code); await runPython(code);
     } else if (mode === 'webapp') {
@@ -469,6 +536,70 @@ window.addEventListener('DOMContentLoaded', async () => {
   clearBtn.addEventListener('click', clearConsole);
   stopBtn.addEventListener('click', () => { if (modeSelect.value === 'javascript') stopJS(); else if (modeSelect.value === 'node') nodeStop(); else appendLine('Stop not available for Python/WebApp in this demo.', 'warn'); });
   installBtn.addEventListener('click', () => { if (modeSelect.value === 'node') nodeInstall(); });
+
+  // Console controls
+  const consoleHeader = document.getElementById('consoleHeader');
+  const timestampsToggle = document.getElementById('timestampsToggle');
+  const clearOnRunToggle = document.getElementById('clearOnRunToggle');
+
+  consoleHeader.addEventListener('click', (e) => {
+    // Don't toggle if clicking on checkboxes or labels
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+    toggleConsole();
+  });
+
+  timestampsToggle.addEventListener('change', (e) => {
+    ConsoleSettings.timestamps = e.target.checked;
+    localStorage.setItem('console-timestamps', String(e.target.checked));
+  });
+
+  clearOnRunToggle.addEventListener('change', (e) => {
+    ConsoleSettings.clearOnRun = e.target.checked;
+    localStorage.setItem('console-clear-on-run', String(e.target.checked));
+  });
+
+  // Load saved settings
+  if (localStorage.getItem('console-timestamps') === 'true') {
+    timestampsToggle.checked = true;
+    ConsoleSettings.timestamps = true;
+  }
+  if (localStorage.getItem('console-clear-on-run') === 'true') {
+    clearOnRunToggle.checked = true;
+    ConsoleSettings.clearOnRun = true;
+  }
+
+  // Preview controls
+  const refreshPreview = document.getElementById('refreshPreview');
+  const openInNewTab = document.getElementById('openInNewTab');
+
+  refreshPreview.addEventListener('click', () => {
+    const mode = modeSelect.value;
+    if (mode === 'webapp') {
+      runWebApp();
+      appendLine('Preview refreshed', 'ok');
+    } else if (mode === 'node') {
+      const iframe = document.getElementById('preview');
+      iframe.src = iframe.src; // Force reload
+      appendLine('Preview refreshed', 'ok');
+    } else {
+      appendLine('Preview refresh only available in Web App or Node mode', 'warn');
+    }
+  });
+
+  openInNewTab.addEventListener('click', () => {
+    const iframe = document.getElementById('preview');
+    if (iframe.srcdoc) {
+      // Web app mode - open srcdoc in new window
+      const win = window.open('', '_blank');
+      win.document.write(iframe.srcdoc);
+      win.document.close();
+    } else if (iframe.src) {
+      // Node mode - open URL in new tab
+      window.open(iframe.src, '_blank');
+    } else {
+      appendLine('No preview available to open', 'warn');
+    }
+  });
 
   // Self tests (JS, Python, WebApp, Node)
   testBtn.addEventListener('click', async () => {
@@ -512,6 +643,52 @@ window.addEventListener('DOMContentLoaded', async () => {
     // restore
     modeSelect.value = prevMode; appendLine('— Self-tests complete —', 'ok');
   });
+
+  // Resizable splitter
+  const mainSplitter = document.getElementById('mainSplitter');
+  const workspace = document.querySelector('.workspace');
+  const rightPane = document.querySelector('.right');
+
+  let isResizing = false;
+
+  mainSplitter.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    mainSplitter.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+
+    const containerWidth = document.querySelector('.main').offsetWidth;
+    const newLeftWidth = e.clientX;
+    const leftPercent = (newLeftWidth / containerWidth) * 100;
+
+    // Constrain between 30% and 70%
+    if (leftPercent > 30 && leftPercent < 70) {
+      workspace.style.flex = `0 0 ${leftPercent}%`;
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      mainSplitter.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      // Save preference
+      const leftPercent = (workspace.offsetWidth / document.querySelector('.main').offsetWidth) * 100;
+      localStorage.setItem('splitter-position', String(leftPercent));
+    }
+  });
+
+  // Load saved splitter position
+  const savedPosition = localStorage.getItem('splitter-position');
+  if (savedPosition) {
+    workspace.style.flex = `0 0 ${savedPosition}%`;
+  }
 
   // Initial state
   appendLine('Ready. Modes: JavaScript, Python, WebApp (static), Node (WebContainers). If Ace fails to load, a fallback editor is used.', 'ok');
